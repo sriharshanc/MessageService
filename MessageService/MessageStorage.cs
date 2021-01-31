@@ -8,6 +8,8 @@ namespace MessageService
 {
     public class MessageStorage : IMessageStorage, IResponse
     {
+        private readonly object _locker = new object();
+
         private List<string> Messages { get; set; } = new List<string>();
         public IEnumerator<string> GetEnumerator()
         {
@@ -19,10 +21,12 @@ namespace MessageService
         }
         public Task SendMessage(string message)
         {
-            if (message != null)
-                Messages.Add(message);
-            Acknowledge();
-
+            lock (_locker)
+            {
+                if (message != null)
+                    Messages.Add(message);
+                Acknowledge();
+            }
             return Task.CompletedTask;
         }
 
