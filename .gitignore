@@ -348,3 +348,12 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+## Node / frontend & backend (House Electrical Planner app)
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.local
+backend/prisma/dev.db
+backend/prisma/dev.db-journal

@@ -1,0 +1,88 @@
+// Prisma schema for the house floor plan / electrical design app.
+// SQLite is used for zero-setup local dev; swap the datasource to Postgres for production.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model FloorPlan {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rooms            Room[]
+  electricalPoints ElectricalPoint[]
+}
+
+model Room {
+  id          String   @id @default(cuid())
+  floorPlanId String
+  floorPlan   FloorPlan @relation(fields: [floorPlanId], references: [id], onDelete: Cascade)
+  name        String
+  // Room footprint is an axis-aligned rectangle in plan coordinates (meters),
+  // with a wall height for 3D extrusion. Complex polygon rooms are modeled as
+  // a JSON list of {x,y} points in `polygon`; when present it overrides the
+  // rectangle fields for rendering, but width/length still drive dimension display.
+  x       Float
+  y       Float
+  width   Float
+  length  Float
+  height  Float
+  polygon String? // JSON-encoded [{x,y}] in plan coordinates, optional
+
+  doors     Door[]
+  windows   Window[]
+  plumbing  PlumbingLine[]
+}
+
+model Door {
+  id     String @id @default(cuid())
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  // Position along the room's wall perimeter, as a normalized offset (0..1)
+  // of the wall segment identified by `wallSide`, plus a physical width (meters).
+  wallSide String // "north" | "south" | "east" | "west"
+  offset   Float
+  width    Float
+}
+
+model Window {
+  id     String @id @default(cuid())
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  wallSide String
+  offset   Float
+  width    Float
+}
+
+model PlumbingLine {
+  id     String @id @default(cuid())
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  // A straight segment in the SAME absolute plan coordinates (meters) as
+  // Room.x/y (not relative to the room's own origin) that cable routing
+  // must keep clear of, plus a clearance radius.
+  x1        Float
+  y1        Float
+  x2        Float
+  y2        Float
+  clearance Float @default(0.15)
+}
+
+model ElectricalPoint {
+  id          String   @id @default(cuid())
+  floorPlanId String
+  floorPlan   FloorPlan @relation(fields: [floorPlanId], references: [id], onDelete: Cascade)
+  type        String // "outlet" | "switch" | "mains" | "light"
+  x           Float // plan-space meters
+  y           Float
+  z           Float // height on wall, meters
+  roomId      String?
+  createdAt   DateTime @default(now())
+}
